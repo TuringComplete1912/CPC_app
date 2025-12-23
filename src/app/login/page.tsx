@@ -1,13 +1,14 @@
 "use client";
 
+export const dynamic = "force-dynamic";
+
 import { useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { signIn, useSession } from "next-auth/react";
 import { Button, Card, Input } from "@/components/UI";
 
 export default function LoginPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const { status } = useSession();
   const [username, setUsername] = useState("admin");
   const [password, setPassword] = useState("123456");
@@ -19,8 +20,6 @@ export default function LoginPage() {
     return null;
   }
 
-  const callbackUrl = searchParams.get("callbackUrl") || "/";
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -29,14 +28,14 @@ export default function LoginPage() {
       redirect: false,
       username,
       password,
-      callbackUrl
+      callbackUrl: "/"
     });
     setLoading(false);
     if (res?.error) {
       setError("用户名或密码错误");
       return;
     }
-    router.push(callbackUrl);
+    router.push("/");
   };
 
   return (
