@@ -72,6 +72,13 @@ export default function HomePage() {
   const [editorContent, setEditorContent] = useState("");
   const [aiLoading, setAiLoading] = useState(false);
   const [aiSuggestion, setAiSuggestion] = useState<string | null>(null);
+  // 本地草稿同步
+  useEffect(() => {
+    if (!currentDoc) return;
+    if (typeof window === "undefined") return;
+    const draftKey = `doc_draft_${currentDoc.id}`;
+    localStorage.setItem(draftKey, editorContent);
+  }, [editorContent, currentDoc]);
 
   useEffect(() => {
     if (session?.user) {
@@ -131,7 +138,15 @@ export default function HomePage() {
 
   const openEditor = (doc: Document) => {
     setCurrentDoc(doc);
-    setEditorContent(doc.content);
+    // 尝试读取本地草稿，若存在则优先使用
+    const draftKey = `doc_draft_${doc.id}`;
+    const cached =
+      typeof window !== "undefined" ? localStorage.getItem(draftKey) : null;
+    if (cached != null) {
+      setEditorContent(cached);
+    } else {
+      setEditorContent(doc.content);
+    }
     setAiSuggestion(null);
     setView(ViewState.EDITOR);
   };
@@ -161,6 +176,10 @@ export default function HomePage() {
     setLogs([log, ...logs]);
 
     setCurrentDoc(updatedDoc);
+    // 清除本地草稿
+    if (typeof window !== "undefined") {
+      localStorage.removeItem(`doc_draft_${currentDoc.id}`);
+    }
     alert("文档保存成功！");
   };
 
@@ -238,23 +257,29 @@ export default function HomePage() {
       </div>
 
       {currentUser ? (
-        <div className="flex items-center gap-6">
-          <button
-            onClick={() => setView(ViewState.DASHBOARD)}
-            className={`text-base font-medium transition-colors ${
-              view === ViewState.DASHBOARD ? "text-brand-600 font-bold" : "text-gray-600 hover:text-brand-600"
-            }`}
-          >
-            工作台
-          </button>
-          <button
-            onClick={() => setView(ViewState.MATERIALS)}
-            className={`text-base font-medium transition-colors ${
-              view === ViewState.MATERIALS ? "text-brand-600 font-bold" : "text-gray-600 hover:text-brand-600"
-            }`}
-          >
-            学习园地
-          </button>
+          <div className="flex items-center gap-6">
+            <button
+              onClick={() => setView(ViewState.DASHBOARD)}
+              className={`text-base font-medium transition-colors ${
+                view === ViewState.DASHBOARD ? "text-brand-600 font-bold" : "text-gray-600 hover:text-brand-600"
+              }`}
+            >
+              工作台
+            </button>
+            <button
+              onClick={() => setView(ViewState.MATERIALS)}
+              className={`text-base font-medium transition-colors ${
+                view === ViewState.MATERIALS ? "text-brand-600 font-bold" : "text-gray-600 hover:text-brand-600"
+              }`}
+            >
+              学习园地
+            </button>
+            <button
+              onClick={() => router.push("/dashboard")}
+              className="text-base font-medium transition-colors text-gray-600 hover:text-brand-600"
+            >
+              个人主页
+            </button>
           <div className="flex items-center gap-3 pl-4 border-l border-gray-200">
             <div className="text-right hidden sm:block">
               <div className="text-sm font-bold text-gray-900">{currentUser.name}</div>
@@ -400,14 +425,15 @@ export default function HomePage() {
                 <Card
                   key={doc.id}
                   className="hover:shadow-md transition-shadow cursor-pointer group border-l-4 border-l-transparent hover:border-l-brand-500"
+                  onClick={() => openEditor(doc)}
                 >
-                  <div className="flex justify-between items-start" onClick={() => openEditor(doc)}>
+                  <div className="flex justify-between items-start">
                     <div>
                       <h4 className="font-bold text-lg text-gray-900 group-hover:text-brand-600 transition-colors">
                         {doc.title}
                       </h4>
-                      <p className="text-gray-500 text-sm mt-2 line-clamp-1">{doc.content || "暂无内容..."}</p>
-                      <div className="flex gap-4 mt-4 text-xs text-gray-400">
+                      <p className="text-gray-500 text-sm mt-2 line-clamp-2">{doc.content || "暂无内容..."}</p>
+                      <div className="flex flex-wrap gap-4 mt-4 text-xs text-gray-400">
                         <span className="flex items-center gap-1">
                           <UserIcon className="w-3 h-3" /> {doc.lastModifiedBy}
                         </span>
@@ -435,22 +461,6 @@ export default function HomePage() {
           </div>
 
           <div className="space-y-8">
-            <Card className="bg-gradient-to-br from-gray-900 to-gray-800 text-white border-none shadow-xl">
-              <h3 className="font-bold text-base mb-4 flex items-center gap-2">
-                <div className="w-1.5 h-1.5 rounded-full bg-accent-400" /> 数据概览
-              </h3>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="bg-white/10 p-4 rounded-xl backdrop-blur-sm border border-white/5">
-                  <div className="text-3xl font-bold text-white">{documents.length}</div>
-                  <div className="text-xs text-gray-300 mt-1">文档总数</div>
-                </div>
-                <div className="bg-white/10 p-4 rounded-xl backdrop-blur-sm border border-white/5">
-                  <div className="text-3xl font-bold text-accent-400">{materials.length}</div>
-                  <div className="text-xs text-gray-300 mt-1">学习资料</div>
-                </div>
-              </div>
-            </Card>
-
             <div>
               <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
                 <Clock className="w-5 h-5 text-brand-600" /> 活动日志

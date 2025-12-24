@@ -8,16 +8,22 @@ async function main() {
   const username = "admin";
   const password = "123456";
   const role = "admin";
+  const nickname = "管理员";
+  const department = "组织部";
+  const avatar = "https://ui-avatars.com/api/?name=Admin&background=dc2626&color=fff";
 
   const hashed = await bcrypt.hash(password, 10);
 
   await prisma.user.upsert({
     where: { username },
-    update: { password: hashed, role },
+    update: { password: hashed, role, nickname, department, avatar },
     create: {
       username,
       password: hashed,
-      role
+      role,
+      nickname,
+      department,
+      avatar
     }
   });
 

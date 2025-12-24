@@ -14,9 +14,13 @@ model User {
   id        String    @id @default(uuid())
   username  String    @unique
   password  String
+  nickname  String    @default("")
+  department String   @default("")
+  avatar    String    @default("")
   role      String    @default("user")
   createdAt DateTime  @default(now())
   materials Material[]
+  workLogs  WorkLog[]
 }
 
 model Material {
@@ -28,4 +32,14 @@ model Material {
 
   uploader   User   @relation(fields: [uploaderId], references: [id])
   uploaderId String
+}
+
+model WorkLog {
+  id        String   @id @default(uuid())
+  title     String
+  content   String
+  createdAt DateTime @default(now())
+
+  author   User   @relation(fields: [authorId], references: [id])
+  authorId String
 }
