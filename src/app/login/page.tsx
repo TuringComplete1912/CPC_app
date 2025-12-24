@@ -2,7 +2,7 @@
 
 export const dynamic = "force-dynamic";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { signIn, useSession } from "next-auth/react";
 import { Button, Card, Input } from "@/components/UI";
@@ -12,8 +12,25 @@ export default function LoginPage() {
   const { status } = useSession();
   const [username, setUsername] = useState("admin");
   const [password, setPassword] = useState("123456");
+  const [remember, setRemember] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  // 恢复“记住账号”
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const saved = localStorage.getItem("login_saved");
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved) as { username: string; password: string };
+        setUsername(parsed.username || "");
+        setPassword(parsed.password || "");
+        setRemember(true);
+      } catch {
+        // ignore
+      }
+    }
+  }, []);
 
   if (status === "authenticated") {
     router.replace("/");
@@ -34,6 +51,11 @@ export default function LoginPage() {
     if (res?.error) {
       setError("用户名或密码错误");
       return;
+    }
+    if (remember && typeof window !== "undefined") {
+      localStorage.setItem("login_saved", JSON.stringify({ username, password }));
+    } else if (typeof window !== "undefined") {
+      localStorage.removeItem("login_saved");
     }
     router.push("/");
   };
@@ -71,6 +93,19 @@ export default function LoginPage() {
               placeholder="123456"
               required
             />
+          </div>
+
+          <div className="flex items-center gap-2 text-sm text-gray-600">
+            <input
+              id="remember"
+              type="checkbox"
+              className="h-4 w-4 rounded border-gray-300 text-brand-600"
+              checked={remember}
+              onChange={(e) => setRemember(e.target.checked)}
+            />
+            <label htmlFor="remember" className="cursor-pointer">
+              记住密码
+            </label>
           </div>
 
           {error && (

@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import DraftEditor from "@/components/DraftEditor";
+import FileManager from "@/components/FileManager";
 
 export default async function DashboardPage() {
   const session = await getServerSession(authOptions);
@@ -99,10 +100,11 @@ export default async function DashboardPage() {
             </div>
           </div>
 
-          <div className="lg:col-span-2">
-            <div className="bg-white shadow-sm border border-brand-100 rounded-2xl p-6 h-full">
+          <div className="lg:col-span-2 space-y-6">
+            <div className="bg-white shadow-sm border border-brand-100 rounded-2xl p-6">
               <DraftEditor />
             </div>
+            <FileManager />
           </div>
         </div>
       </div>

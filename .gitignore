@@ -16,6 +16,10 @@ dist
 dist-ssr
 *.local
 
+# 忽略上传目录的内容，但保留目录本身
+public/uploads/*
+!public/uploads/.gitkeep
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
@@ -28,3 +32,4 @@ dist-ssr
 *.sw?
 
 /src/generated/prisma
+

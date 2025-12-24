@@ -21,6 +21,7 @@ model User {
   createdAt DateTime  @default(now())
   materials Material[]
   workLogs  WorkLog[]
+  files     File[]
 }
 
 model Material {
@@ -42,4 +43,17 @@ model WorkLog {
 
   author   User   @relation(fields: [authorId], references: [id])
   authorId String
+}
+
+model File {
+  id         String   @id @default(uuid())
+  filename   String
+  path       String
+  url        String
+  mimeType   String
+  size       Int
+  createdAt  DateTime @default(now())
+
+  uploader   User   @relation(fields: [uploaderId], references: [id])
+  uploaderId String
 }
