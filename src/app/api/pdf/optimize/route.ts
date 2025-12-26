@@ -17,7 +17,15 @@ export async function POST(req: NextRequest) {
     }
 
     // 使用系统API Key
-    const SYSTEM_API_KEY = "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";
+    // 优先读取环境变量，如果没有则为空字符串
+    const SYSTEM_API_KEY = process.env.OPENROUTER_API_KEY || process.env.OPENAI_API_KEY;
+
+    // 增加一个安全检查
+    if (!SYSTEM_API_KEY) {
+      console.error("Missing OpenRouter API Key");
+      return NextResponse.json({ message: "系统配置错误：缺少API Key" },
+     { status: 500 });
+    }
 
     const response = await fetch(
       "https://openrouter.ai/api/v1/chat/completions",
