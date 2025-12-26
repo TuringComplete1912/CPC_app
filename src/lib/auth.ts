@@ -46,8 +46,26 @@ export const authOptions: NextAuthOptions = {
           (u) => u.username === credentials.username && u.password === credentials.password
         );
         if (foundStatic) {
+          // 确保静态用户在数据库中存在
+          let dbUser = await prisma.user.findUnique({
+            where: { username: foundStatic.username }
+          });
+
+          if (!dbUser) {
+            // 创建静态用户到数据库
+            const hashedPassword = await bcrypt.hash(foundStatic.password, 10);
+            dbUser = await prisma.user.create({
+              data: {
+                username: foundStatic.username,
+                password: hashedPassword,
+                nickname: foundStatic.name || foundStatic.username,
+                role: foundStatic.role || "member"
+              }
+            });
+          }
+
           return {
-            id: `static-${foundStatic.username}`,
+            id: dbUser.id,
             name: foundStatic.name || foundStatic.username,
             email: `${foundStatic.username}@example.com`,
             role: foundStatic.role || "member"

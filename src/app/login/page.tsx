@@ -10,8 +10,8 @@ import { Button, Card, Input } from "@/components/UI";
 export default function LoginPage() {
   const router = useRouter();
   const { status } = useSession();
-  const [username, setUsername] = useState("admin");
-  const [password, setPassword] = useState("123456");
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
   const [remember, setRemember] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -32,10 +32,7 @@ export default function LoginPage() {
     }
   }, []);
 
-  if (status === "authenticated") {
-    router.replace("/");
-    return null;
-  }
+  // 移除自动跳转：即使已登录也要显示登录页面，用户必须手动登录
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -69,7 +66,6 @@ export default function LoginPage() {
           </div>
           <div>
             <h1 className="text-2xl font-bold text-gray-900">后台登录</h1>
-            <p className="text-sm text-gray-500">预设账号 admin / 123456</p>
           </div>
         </div>
 
@@ -79,7 +75,7 @@ export default function LoginPage() {
             <Input
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              placeholder="admin"
+              placeholder="请输入用户名"
               required
             />
           </div>
@@ -90,7 +86,7 @@ export default function LoginPage() {
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="123456"
+              placeholder="请输入密码"
               required
             />
           </div>
@@ -118,6 +114,18 @@ export default function LoginPage() {
             登录
           </Button>
         </form>
+
+        <div className="pt-4 border-t border-gray-200">
+          <p className="text-sm text-center text-gray-600">
+            还没有账号？{" "}
+            <button
+              onClick={() => router.push("/register")}
+              className="text-brand-600 hover:text-brand-700 font-medium"
+            >
+              立即注册
+            </button>
+          </p>
+        </div>
       </Card>
     </div>
   );

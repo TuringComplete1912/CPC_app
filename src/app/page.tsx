@@ -20,6 +20,9 @@ import {
 } from "lucide-react";
 import { polishText } from "@/services/geminiService";
 import { Badge, Button, Card } from "@/components/UI";
+import Navbar from "@/components/Navbar";
+import DocumentDetailModal from "@/components/DocumentDetailModal";
+import WorkLogDetailModal from "@/components/WorkLogDetailModal";
 import {
   Document,
   LearningMaterial,
@@ -64,9 +67,12 @@ export default function HomePage() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [view, setView] = useState<ViewState>(ViewState.LANDING);
 
-  const [documents, setDocuments] = useState<Document[]>(INITIAL_DOCS);
+  const [documents, setDocuments] = useState<any[]>([]);
+  const [workLogs, setWorkLogs] = useState<any[]>([]);
   const [materials, setMaterials] = useState<LearningMaterial[]>([]);
   const [logs, setLogs] = useState<ModificationLog[]>([]);
+  const [selectedDocument, setSelectedDocument] = useState<any>(null);
+  const [selectedWorkLog, setSelectedWorkLog] = useState<any>(null);
 
   const [currentDoc, setCurrentDoc] = useState<Document | null>(null);
   const [editorContent, setEditorContent] = useState("");
@@ -113,8 +119,33 @@ export default function HomePage() {
         console.error("加载资料失败", error);
       }
     };
+
+    const loadDocuments = async () => {
+      try {
+        const res = await fetch("/api/documents");
+        if (!res.ok) return;
+        const data = await res.json();
+        setDocuments(data);
+      } catch (error) {
+        console.error("加载文档失败", error);
+      }
+    };
+
+    const loadWorkLogs = async () => {
+      try {
+        const res = await fetch("/api/worklogs");
+        if (!res.ok) return;
+        const data = await res.json();
+        setWorkLogs(data);
+      } catch (error) {
+        console.error("加载活动日志失败", error);
+      }
+    };
+
     if (status === "authenticated") {
       loadMaterials();
+      loadDocuments();
+      loadWorkLogs();
     }
   }, [status]);
 
@@ -244,77 +275,7 @@ export default function HomePage() {
     );
   }
 
-  const Navbar = () => (
-    <nav className="w-full flex justify-between items-center py-5 px-8 max-w-7xl mx-auto border-b border-gray-100 bg-white sticky top-0 z-30">
-      <div
-        className="flex items-center gap-3 cursor-pointer"
-        onClick={() => (currentUser ? setView(ViewState.DASHBOARD) : setView(ViewState.LANDING))}
-      >
-        <div className="bg-brand-600 text-white p-2 rounded shadow-md">
-          <div className="font-serif font-bold text-lg leading-none">党</div>
-        </div>
-        <span className="font-bold text-xl tracking-tight text-gray-900">学生第六党支部</span>
-      </div>
-
-      {currentUser ? (
-          <div className="flex items-center gap-6">
-            <button
-              onClick={() => setView(ViewState.DASHBOARD)}
-              className={`text-base font-medium transition-colors ${
-                view === ViewState.DASHBOARD ? "text-brand-600 font-bold" : "text-gray-600 hover:text-brand-600"
-              }`}
-            >
-              工作台
-            </button>
-            <button
-              onClick={() => setView(ViewState.MATERIALS)}
-              className={`text-base font-medium transition-colors ${
-                view === ViewState.MATERIALS ? "text-brand-600 font-bold" : "text-gray-600 hover:text-brand-600"
-              }`}
-            >
-              学习园地
-            </button>
-            <button
-              onClick={() => router.push("/dashboard")}
-              className="text-base font-medium transition-colors text-gray-600 hover:text-brand-600"
-            >
-              个人主页
-            </button>
-          <div className="flex items-center gap-3 pl-4 border-l border-gray-200">
-            <div className="text-right hidden sm:block">
-              <div className="text-sm font-bold text-gray-900">{currentUser.name}</div>
-              <div className="text-xs text-brand-600">{currentUser.role === "admin" ? "管理员" : "党员"}</div>
-            </div>
-            <img
-              src={currentUser.avatar}
-              alt="User"
-              className="w-9 h-9 rounded-full border-2 border-brand-100"
-            />
-            <button
-              onClick={handleLogout}
-              className="text-gray-400 hover:text-brand-600 transition-colors ml-2"
-              title="退出登录"
-            >
-              <LogOut size={18} />
-            </button>
-          </div>
-        </div>
-      ) : (
-        <div className="flex items-center gap-4">
-          <a href="/login" className="text-sm font-medium text-gray-600 hover:text-gray-900">
-            去登录
-          </a>
-          <Button
-            variant="primary"
-            onClick={() => router.push("/login")}
-            className="bg-brand-600 hover:bg-brand-700"
-          >
-            党员登录
-          </Button>
-        </div>
-      )}
-    </nav>
-  );
+  // 使用共享的 Navbar 组件
 
   const LandingView = () => (
     <div className="flex flex-col min-h-screen bg-brand-50/50">
@@ -403,14 +364,9 @@ export default function HomePage() {
     <div className="min-h-screen bg-gray-50 flex flex-col">
       <Navbar />
       <main className="flex-1 max-w-7xl mx-auto w-full px-6 py-8">
-        <header className="mb-8 flex justify-between items-end">
-          <div>
-            <h2 className="text-2xl font-bold text-gray-900">工作台</h2>
-            <p className="text-gray-500 mt-1">欢迎回来，{currentUser?.name}同志。以下是支部的最新动态。</p>
-          </div>
-          <Button onClick={createNewDoc} className="bg-brand-600 hover:bg-brand-700">
-            <Plus className="w-4 h-4 mr-2" /> 新建文档
-          </Button>
+        <header className="mb-8">
+          <h2 className="text-2xl font-bold text-gray-900">工作台</h2>
+          <p className="text-gray-500 mt-1">欢迎回来，{currentUser?.name}同志。以下是支部的最新动态。</p>
         </header>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -419,62 +375,86 @@ export default function HomePage() {
               <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
                 <FileText className="w-5 h-5 text-brand-600" /> 近期文档
               </h3>
+              <button
+                onClick={() => router.push("/documents")}
+                className="text-sm text-brand-600 hover:text-brand-700 flex items-center gap-1"
+              >
+                查看全部 <ChevronRight className="w-4 h-4" />
+              </button>
             </div>
             <div className="grid gap-4">
-              {documents.map((doc) => (
+              {documents.slice(0, 3).map((doc) => (
                 <Card
                   key={doc.id}
                   className="hover:shadow-md transition-shadow cursor-pointer group border-l-4 border-l-transparent hover:border-l-brand-500"
-                  onClick={() => openEditor(doc)}
+                  onClick={() => setSelectedDocument(doc)}
                 >
                   <div className="flex justify-between items-start">
-                    <div>
-                      <h4 className="font-bold text-lg text-gray-900 group-hover:text-brand-600 transition-colors">
-                        {doc.title}
-                      </h4>
-                      <p className="text-gray-500 text-sm mt-2 line-clamp-2">{doc.content || "暂无内容..."}</p>
-                      <div className="flex flex-wrap gap-4 mt-4 text-xs text-gray-400">
-                        <span className="flex items-center gap-1">
-                          <UserIcon className="w-3 h-3" /> {doc.lastModifiedBy}
-                        </span>
-                        <span className="flex items-center gap-1">
-                          <Clock className="w-3 h-3" /> {new Date(doc.lastModified).toLocaleDateString("zh-CN")}
-                        </span>
+                    <div className="flex-1">
+                      <div className="flex items-center gap-3 mb-2">
+                        <h4 className="font-bold text-lg text-gray-900 group-hover:text-brand-600 transition-colors">
+                          {doc.title}
+                        </h4>
                         <Badge
                           className={
                             doc.status === "published"
-                              ? "bg-green-100 text-green-700"
-                              : "bg-yellow-100 text-yellow-700"
+                              ? "bg-green-50 text-green-700"
+                              : "bg-yellow-50 text-yellow-700"
                           }
                         >
                           {doc.status === "published" ? "已发布" : "草稿"}
                         </Badge>
                       </div>
-                    </div>
-                    <div className="p-2 bg-gray-50 rounded-full group-hover:bg-brand-50 transition-colors">
-                      <PenTool className="w-4 h-4 text-gray-400 group-hover:text-brand-600" />
+                      <p className="text-gray-500 text-sm mt-2 line-clamp-2">
+                        {doc.content.substring(0, 100)}
+                        {doc.content.length > 100 && "..."}
+                      </p>
+                      <div className="flex flex-wrap gap-4 mt-4 text-xs text-gray-400">
+                        <span className="flex items-center gap-1">
+                          <UserIcon className="w-3 h-3" /> {doc.author.name}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <Clock className="w-3 h-3" />{" "}
+                          {new Date(doc.publishedAt || doc.createdAt).toLocaleDateString("zh-CN")}
+                        </span>
+                      </div>
                     </div>
                   </div>
                 </Card>
               ))}
+              {documents.length === 0 && (
+                <p className="text-sm text-gray-400 text-center py-8">暂无文档</p>
+              )}
             </div>
           </div>
 
           <div className="space-y-8">
             <div>
-              <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
-                <Clock className="w-5 h-5 text-brand-600" /> 活动日志
-              </h3>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                  <Clock className="w-5 h-5 text-brand-600" /> 活动日志
+                </h3>
+                <button
+                  onClick={() => router.push("/worklogs")}
+                  className="text-sm text-brand-600 hover:text-brand-700 flex items-center gap-1"
+                >
+                  查看全部 <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
               <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 max-h-[400px] overflow-y-auto">
                 <div className="space-y-6 relative border-l-2 border-gray-100 ml-2">
-                  {logs.length === 0 && <p className="text-sm text-gray-400 pl-6">暂无近期活动。</p>}
-                  {logs.map((log) => (
-                    <div key={log.id} className="relative pl-6 pb-1">
-                      <div className="absolute -left-[7px] top-1.5 w-3 h-3 rounded-full bg-brand-500 border-2 border-white shadow-sm" />
-                      <p className="text-sm font-medium text-gray-900 leading-snug">{log.description}</p>
+                  {workLogs.length === 0 && <p className="text-sm text-gray-400 pl-6">暂无近期活动。</p>}
+                  {workLogs.slice(0, 5).map((log) => (
+                    <div
+                      key={log.id}
+                      className="relative pl-6 pb-1 cursor-pointer hover:bg-gray-50 -ml-2 p-2 rounded transition-colors"
+                      onClick={() => setSelectedWorkLog(log)}
+                    >
+                      <div className="absolute left-0 top-3.5 w-3 h-3 rounded-full bg-brand-500 border-2 border-white shadow-sm" />
+                      <p className="text-sm font-medium text-gray-900 leading-snug line-clamp-1">{log.title}</p>
                       <p className="text-xs text-gray-400 mt-1.5 flex items-center gap-1">
-                        <span className="font-medium text-gray-500">{log.userName}</span> •{" "}
-                        {new Date(log.timestamp).toLocaleString("zh-CN")}
+                        <span className="font-medium text-gray-500">{log.author.name}</span> •{" "}
+                        {new Date(log.publishedAt || log.createdAt).toLocaleDateString("zh-CN")}
                       </p>
                     </div>
                   ))}
@@ -484,6 +464,22 @@ export default function HomePage() {
           </div>
         </div>
       </main>
+
+      {/* 文档详情弹窗 */}
+      {selectedDocument && (
+        <DocumentDetailModal
+          document={selectedDocument}
+          onClose={() => setSelectedDocument(null)}
+        />
+      )}
+
+      {/* 活动日志详情弹窗 */}
+      {selectedWorkLog && (
+        <WorkLogDetailModal
+          workLog={selectedWorkLog}
+          onClose={() => setSelectedWorkLog(null)}
+        />
+      )}
     </div>
   );
 

@@ -8,24 +8,23 @@ export async function middleware(req: NextRequest) {
   // 允许认证相关与静态资源
   if (
     pathname.startsWith("/api/auth") ||
+    pathname.startsWith("/api/register") ||
     pathname.startsWith("/_next") ||
     pathname === "/favicon.ico"
   ) {
     return NextResponse.next();
   }
 
-  // 登录页已登录则跳转首页
+  // 登录和注册页允许访问（不自动跳转，用户必须手动登录）
+  if (pathname.startsWith("/login") || pathname.startsWith("/register")) {
+    return NextResponse.next();
+  }
+
+  // 检查登录状态
   const token = await getToken({
     req,
     secret: process.env.NEXTAUTH_SECRET || "dev-secret"
   });
-
-  if (pathname.startsWith("/login")) {
-    if (token) {
-      return NextResponse.redirect(new URL("/", req.url));
-    }
-    return NextResponse.next();
-  }
 
   // 其他路由需登录
   if (!token) {

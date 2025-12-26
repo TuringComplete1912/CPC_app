@@ -11,38 +11,128 @@ datasource db {
 }
 
 model User {
-  id        String    @id @default(uuid())
-  username  String    @unique
-  password  String
-  nickname  String    @default("")
-  department String   @default("")
-  avatar    String    @default("")
-  role      String    @default("user")
-  createdAt DateTime  @default(now())
-  materials Material[]
-  workLogs  WorkLog[]
-  files     File[]
+  id              String          @id @default(uuid())
+  username        String          @unique
+  password        String
+  nickname        String          @default("")
+  department      String          @default("")
+  avatar          String          @default("")
+  role            String          @default("user")
+  createdAt       DateTime        @default(now())
+  
+  // 个人资料（仅个人主页展示）
+  bio             String          @default("") // 个人简介
+  phone           String          @default("") // 联系电话
+  email           String          @default("") // 邮箱
+  
+  // AI功能
+  apiKey          String          @default("") // 用户的API key
+  useOwnApiKey    Boolean         @default(false) // 是否优先使用自己的API key
+  
+  materials       Material[]
+  workLogs        WorkLog[]
+  files           File[]
+  categories      Category[]      @relation("CategoryCreator")
+  workLogEdits    WorkLogEditor[]
+  documentEdits   DocumentEditor[]
+  documents       Document[]
+  topics          Topic[]
+  answers         Answer[]
+}
+
+model Document {
+  id          String             @id @default(uuid())
+  title       String
+  content     String
+  status      String             @default("draft") // draft, published
+  createdAt   DateTime           @default(now())
+  publishedAt DateTime?
+
+  author      User               @relation(fields: [authorId], references: [id])
+  authorId    String
+  editors     DocumentEditor[]
+  attachments DocumentAttachment[]
+}
+
+model DocumentEditor {
+  id         String   @id @default(uuid())
+  documentId String
+  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  userId     String
+  user       User     @relation(fields: [userId], references: [id])
+  editedAt   DateTime @default(now())
+
+  @@unique([documentId, userId])
+}
+
+model DocumentAttachment {
+  id         String   @id @default(uuid())
+  documentId String
+  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  filename   String
+  url        String
+  size       Int
+  createdAt  DateTime @default(now())
+}
+
+model Category {
+  id          String     @id @default(uuid())
+  name        String     @unique // 板块名称（大字展示）
+  description String     @default("") // 基本介绍（小字展示）
+  createdAt   DateTime   @default(now())
+  creatorId   String
+  creator     User       @relation("CategoryCreator", fields: [creatorId], references: [id])
+  materials   Material[]
 }
 
 model Material {
-  id        String   @id @default(uuid())
-  title     String
-  fileUrl   String
-  fileType  String
-  createdAt DateTime @default(now())
+  id         String   @id @default(uuid())
+  title      String
+  fileUrl    String
+  fileType   String
+  fileSize   Int      @default(0) // 文件大小（字节）
+  createdAt  DateTime @default(now())
 
-  uploader   User   @relation(fields: [uploaderId], references: [id])
+  uploader   User     @relation(fields: [uploaderId], references: [id])
   uploaderId String
+
+  category   Category? @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  categoryId String?
 }
 
 model WorkLog {
-  id        String   @id @default(uuid())
-  title     String
-  content   String
-  createdAt DateTime @default(now())
+  id          String   @id @default(uuid())
+  title       String
+  content     String
+  status      String   @default("draft") // draft, published
+  createdAt   DateTime @default(now())
+  publishedAt DateTime?
 
-  author   User   @relation(fields: [authorId], references: [id])
-  authorId String
+  author      User                @relation(fields: [authorId], references: [id])
+  authorId    String
+  editors     WorkLogEditor[]
+  attachments WorkLogAttachment[]
+}
+
+model WorkLogEditor {
+  id         String   @id @default(uuid())
+  workLogId  String
+  workLog    WorkLog  @relation(fields: [workLogId], references: [id], onDelete: Cascade)
+  userId     String
+  user       User     @relation(fields: [userId], references: [id])
+  editedAt   DateTime @default(now())
+
+  @@unique([workLogId, userId])
+}
+
+model WorkLogAttachment {
+  id        String   @id @default(uuid())
+  workLogId String
+  workLog   WorkLog  @relation(fields: [workLogId], references: [id], onDelete: Cascade)
+  filename  String
+  url       String
+  size      Int
+  createdAt DateTime @default(now())
 }
 
 model File {
@@ -56,4 +146,26 @@ model File {
 
   uploader   User   @relation(fields: [uploaderId], references: [id])
   uploaderId String
+}
+
+model Topic {
+  id          String   @id @default(uuid())
+  title       String
+  description String   @default("")
+  createdAt   DateTime @default(now())
+
+  author      User     @relation(fields: [authorId], references: [id])
+  authorId    String
+  answers     Answer[]
+}
+
+model Answer {
+  id        String   @id @default(uuid())
+  content   String
+  createdAt DateTime @default(now())
+
+  topic     Topic  @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  topicId   String
+  author    User   @relation(fields: [authorId], references: [id])
+  authorId  String
 }
