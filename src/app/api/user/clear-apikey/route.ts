@@ -12,7 +12,7 @@ export async function POST() {
   try {
     await prisma.user.update({
       where: { id: session.user.id as string },
-      data: { apiKey: null }
+      data: { apiKey: "" }
     });
 
     return NextResponse.json({ message: "API Key已清除，将使用系统默认Key" });

@@ -11,9 +11,11 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   const session = await getServerSession(authOptions);
-  if (!session?.user?.id) {
-    return NextResponse.json({ message: "未登录" }, { status: 401 });
+  if (!session || !session.user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+
+  const userId = session.user.id as string;
 
   try {
     const { id } = params;
@@ -38,15 +40,15 @@ export async function DELETE(
 
     // 获取当前用户信息
     const currentUser = await prisma.user.findUnique({
-      where: { id: session.user.id }
+      where: { id: userId }
     });
 
-    const isCreator = category.creatorId === session.user.id;
+    const isCreator = category.creatorId === userId;
     const isAdmin = currentUser?.role === "admin";
 
     // 检查是否有他人上传的文件
     const hasOtherUserFiles = category.materials.some(
-      (material) => material.uploaderId !== session.user.id
+      (material) => material.uploaderId !== userId
     );
 
     // 权限检查
