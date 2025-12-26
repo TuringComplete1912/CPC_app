@@ -60,12 +60,13 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
       <Card className="w-full max-w-md space-y-6">
-        <div className="text-center space-y-2">
-          <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-brand-100 text-brand-600 font-bold">
+        <div className="text-center space-y-3">
+          <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-brand-600 text-white font-bold text-xl">
             党
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">后台登录</h1>
+            <h1 className="text-2xl font-bold text-gray-900">学生第六党支部</h1>
+            <p className="text-sm text-gray-500 mt-1">数字化工作平台</p>
           </div>
         </div>
 
@@ -95,7 +96,7 @@ export default function LoginPage() {
             <input
               id="remember"
               type="checkbox"
-              className="h-4 w-4 rounded border-gray-300 text-brand-600"
+              className="h-4 w-4 rounded border-gray-300 text-brand-600 focus:ring-brand-500"
               checked={remember}
               onChange={(e) => setRemember(e.target.checked)}
             />
@@ -105,7 +106,7 @@ export default function LoginPage() {
           </div>
 
           {error && (
-            <div className="text-sm text-red-600 bg-red-50 border border-red-100 rounded-lg px-3 py-2">
+            <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-4 py-3">
               {error}
             </div>
           )}

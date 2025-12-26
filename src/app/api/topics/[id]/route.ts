@@ -15,6 +15,7 @@ export async function GET(
 
   try {
     const { id } = params;
+    const userId = session.user.id as string;
 
     const topic = await prisma.topic.findUnique({
       where: { id },
@@ -26,9 +27,17 @@ export async function GET(
           include: {
             author: {
               select: { id: true, username: true, nickname: true }
+            },
+            likes: true,
+            replies: {
+              include: {
+                author: {
+                  select: { id: true, username: true, nickname: true }
+                }
+              },
+              orderBy: { createdAt: "asc" }
             }
-          },
-          orderBy: { createdAt: "desc" }
+          }
         }
       }
     });
@@ -36,6 +45,15 @@ export async function GET(
     if (!topic) {
       return NextResponse.json({ message: "话题不存在" }, { status: 404 });
     }
+
+    // 按点赞数排序回答
+    const sortedAnswers = topic.answers
+      .map((answer) => ({
+        ...answer,
+        likeCount: answer.likes.length,
+        isLiked: answer.likes.some((like) => like.userId === userId)
+      }))
+      .sort((a, b) => b.likeCount - a.likeCount);
 
     return NextResponse.json({
       id: topic.id,
@@ -46,14 +64,25 @@ export async function GET(
         id: topic.author.id,
         name: topic.author.nickname || topic.author.username
       },
-      answers: topic.answers.map((answer) => ({
+      answers: sortedAnswers.map((answer) => ({
         id: answer.id,
         content: answer.content,
         createdAt: answer.createdAt,
+        likeCount: answer.likeCount,
+        isLiked: answer.isLiked,
         author: {
           id: answer.author.id,
           name: answer.author.nickname || answer.author.username
-        }
+        },
+        replies: answer.replies.map((reply) => ({
+          id: reply.id,
+          content: reply.content,
+          createdAt: reply.createdAt,
+          author: {
+            id: reply.author.id,
+            name: reply.author.nickname || reply.author.username
+          }
+        }))
       }))
     });
   } catch (error: any) {

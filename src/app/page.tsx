@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useSession, signOut } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import {
@@ -16,7 +16,8 @@ import {
   Save,
   Wand2,
   Download,
-  Plus
+  Plus,
+  Search
 } from "lucide-react";
 import { polishText } from "@/services/geminiService";
 import { Badge, Button, Card } from "@/components/UI";
@@ -365,8 +366,23 @@ export default function HomePage() {
       <Navbar />
       <main className="flex-1 max-w-7xl mx-auto w-full px-6 py-8">
         <header className="mb-8">
-          <h2 className="text-2xl font-bold text-gray-900">工作台</h2>
-          <p className="text-gray-500 mt-1">欢迎回来，{currentUser?.name}同志。以下是支部的最新动态。</p>
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h2 className="text-2xl font-bold text-gray-900">工作台</h2>
+              <p className="text-gray-500 mt-1">欢迎回来，{currentUser?.name}同志</p>
+            </div>
+          </div>
+          
+          {/* 搜索框 - 点击跳转到搜索页面 */}
+          <div 
+            className="relative cursor-pointer"
+            onClick={() => router.push('/search')}
+          >
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" />
+            <div className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-lg bg-white text-gray-500 hover:border-brand-500 hover:shadow-sm transition-all">
+              搜索社区、文档、学习资料...
+            </div>
+          </div>
         </header>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -377,7 +393,7 @@ export default function HomePage() {
               </h3>
               <button
                 onClick={() => router.push("/documents")}
-                className="text-sm text-brand-600 hover:text-brand-700 flex items-center gap-1"
+                className="text-sm text-brand-600 hover:text-brand-700 flex items-center gap-1 font-medium"
               >
                 查看全部 <ChevronRight className="w-4 h-4" />
               </button>
@@ -436,14 +452,14 @@ export default function HomePage() {
                 </h3>
                 <button
                   onClick={() => router.push("/worklogs")}
-                  className="text-sm text-brand-600 hover:text-brand-700 flex items-center gap-1"
+                  className="text-sm text-brand-600 hover:text-brand-700 flex items-center gap-1 font-medium"
                 >
                   查看全部 <ChevronRight className="w-4 h-4" />
                 </button>
               </div>
               <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 max-h-[400px] overflow-y-auto">
                 <div className="space-y-6 relative border-l-2 border-gray-100 ml-2">
-                  {workLogs.length === 0 && <p className="text-sm text-gray-400 pl-6">暂无近期活动。</p>}
+                  {workLogs.length === 0 && <p className="text-sm text-gray-400 pl-6">暂无近期活动</p>}
                   {workLogs.slice(0, 5).map((log) => (
                     <div
                       key={log.id}

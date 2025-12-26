@@ -7,6 +7,7 @@ import { ArrowLeft, Save, Send, Users } from "lucide-react";
 import { Button } from "@/components/UI";
 import Navbar from "@/components/Navbar";
 import RichTextEditor from "@/components/RichTextEditor";
+import AttachmentUploader from "@/components/AttachmentUploader";
 
 interface WorkLog {
   id: string;
@@ -26,6 +27,14 @@ interface WorkLog {
   }>;
 }
 
+interface Attachment {
+  id: string;
+  filename: string;
+  url: string;
+  size: number;
+  createdAt: string;
+}
+
 export default function WorkLogEditPage() {
   const router = useRouter();
   const params = useParams();
@@ -34,6 +43,7 @@ export default function WorkLogEditPage() {
   const [workLog, setWorkLog] = useState<WorkLog | null>(null);
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
+  const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [showPublishConfirm, setShowPublishConfirm] = useState(false);
@@ -41,6 +51,7 @@ export default function WorkLogEditPage() {
   useEffect(() => {
     if (status === "authenticated" && workLogId) {
       loadWorkLog();
+      loadAttachments();
     }
   }, [status, workLogId]);
 
@@ -59,6 +70,35 @@ export default function WorkLogEditPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const loadAttachments = async () => {
+    try {
+      const res = await fetch(`/api/worklogs/${workLogId}/attachments`);
+      if (res.ok) {
+        const data = await res.json();
+        setAttachments(data);
+      }
+    } catch (error) {
+      console.error("加载附件失败", error);
+    }
+  };
+
+  const handleUploadAttachment = async (file: File) => {
+    const formData = new FormData();
+    formData.append("file", file);
+
+    const res = await fetch(`/api/worklogs/${workLogId}/attachments`, {
+      method: "POST",
+      body: formData
+    });
+
+    if (!res.ok) {
+      const data = await res.json();
+      throw new Error(data.message || "上传失败");
+    }
+
+    await loadAttachments();
   };
 
   const handleSave = async () => {
@@ -231,6 +271,13 @@ export default function WorkLogEditPage() {
               placeholder="开始编写活动日志内容..."
             />
           </div>
+
+          {/* 附件 */}
+          <AttachmentUploader
+            attachments={attachments}
+            onUpload={handleUploadAttachment}
+            disabled={isPublished}
+          />
         </div>
       </main>
 

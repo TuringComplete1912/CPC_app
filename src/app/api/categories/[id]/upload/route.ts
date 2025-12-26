@@ -53,6 +53,28 @@ export async function POST(
       );
     }
 
+    // 检查文件类型
+    const mime = (file as any).type || "";
+    const fileName = file.name.toLowerCase();
+    const allowedTypes = [
+      "application/pdf",
+      "application/vnd.ms-powerpoint",
+      "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+      "application/zip",
+      "application/x-zip-compressed"
+    ];
+    const allowedExtensions = [".pdf", ".ppt", ".pptx", ".zip"];
+    
+    const hasValidType = allowedTypes.some(type => mime.includes(type));
+    const hasValidExtension = allowedExtensions.some(ext => fileName.endsWith(ext));
+    
+    if (!hasValidType && !hasValidExtension) {
+      return NextResponse.json(
+        { message: "只支持上传PDF、PPT和ZIP文件" },
+        { status: 400 }
+      );
+    }
+
     const buffer = Buffer.from(await file.arrayBuffer());
     const uploadsDir = path.join(process.cwd(), "public", "uploads");
     await fs.mkdir(uploadsDir, { recursive: true });
@@ -63,18 +85,23 @@ export async function POST(
 
     await fs.writeFile(filepath, buffer);
 
-    const mime = (file as any).type || "application/octet-stream";
     const fileUrl = `/uploads/${filename}`;
+    
+    // 根据文件类型确定类别
+    let fileTypeCategory = "document";
+    if (mime.includes("pdf")) {
+      fileTypeCategory = "document";
+    } else if (mime.includes("presentation") || mime.includes("powerpoint") || fileName.endsWith(".ppt") || fileName.endsWith(".pptx")) {
+      fileTypeCategory = "presentation";
+    } else if (mime.includes("zip")) {
+      fileTypeCategory = "archive";
+    }
 
     const material = await prisma.material.create({
       data: {
         title: title.trim(),
         fileUrl,
-        fileType: mime.startsWith("image/")
-          ? "image"
-          : mime.startsWith("video/")
-            ? "video"
-            : "document",
+        fileType: fileTypeCategory,
         fileSize,
         uploaderId: session.user.id,
         categoryId

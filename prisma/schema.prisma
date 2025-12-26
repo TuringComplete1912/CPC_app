@@ -38,6 +38,8 @@ model User {
   documents       Document[]
   topics          Topic[]
   answers         Answer[]
+  answerLikes     AnswerLike[]
+  replies         Reply[]
 }
 
 model Document {
@@ -79,6 +81,7 @@ model Category {
   id          String     @id @default(uuid())
   name        String     @unique // 板块名称（大字展示）
   description String     @default("") // 基本介绍（小字展示）
+  type        String     @default("course") // 类型：theory(理论学习) 或 course(课程学习)
   createdAt   DateTime   @default(now())
   creatorId   String
   creator     User       @relation("CategoryCreator", fields: [creatorId], references: [id])
@@ -164,8 +167,33 @@ model Answer {
   content   String
   createdAt DateTime @default(now())
 
-  topic     Topic  @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  topic     Topic        @relation(fields: [topicId], references: [id], onDelete: Cascade)
   topicId   String
+  author    User         @relation(fields: [authorId], references: [id])
+  authorId  String
+  likes     AnswerLike[]
+  replies   Reply[]
+}
+
+model AnswerLike {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
+
+  answer    Answer @relation(fields: [answerId], references: [id], onDelete: Cascade)
+  answerId  String
+  user      User   @relation(fields: [userId], references: [id])
+  userId    String
+
+  @@unique([answerId, userId])
+}
+
+model Reply {
+  id        String   @id @default(uuid())
+  content   String
+  createdAt DateTime @default(now())
+
+  answer    Answer @relation(fields: [answerId], references: [id], onDelete: Cascade)
+  answerId  String
   author    User   @relation(fields: [authorId], references: [id])
   authorId  String
 }

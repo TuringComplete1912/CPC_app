@@ -234,14 +234,14 @@ export default function CategoryDetailPage() {
                   </h4>
                   <Badge
                     className={
-                      mat.fileType === "video"
-                        ? "bg-red-50 text-red-700"
-                        : mat.fileType === "image"
-                          ? "bg-green-50 text-green-700"
+                      mat.fileType === "presentation"
+                        ? "bg-orange-50 text-orange-700"
+                        : mat.fileType === "archive"
+                          ? "bg-purple-50 text-purple-700"
                           : "bg-blue-50 text-blue-700"
                     }
                   >
-                    {mat.fileType === "video" ? "视频" : mat.fileType === "image" ? "图片" : "文档"}
+                    {mat.fileType === "presentation" ? "PPT" : mat.fileType === "archive" ? "ZIP" : "PDF"}
                   </Badge>
                 </div>
                 <div className="text-xs text-gray-400 space-y-1">
@@ -314,6 +314,7 @@ export default function CategoryDetailPage() {
                 </label>
                 <input
                   type="file"
+                  accept=".pdf,.ppt,.pptx,.zip"
                   onChange={handleFileSelect}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500"
                 />
@@ -323,7 +324,7 @@ export default function CategoryDetailPage() {
                   </p>
                 )}
                 <p className="text-xs text-gray-400 mt-1">
-                  普通用户限制: 50MB，管理员无限制
+                  支持格式: PDF、PPT、ZIP | 普通用户限制: 50MB
                 </p>
               </div>
             </div>

@@ -27,6 +27,7 @@ export async function GET() {
       id: cat.id,
       name: cat.name,
       description: cat.description,
+      type: cat.type,
       createdAt: cat.createdAt,
       creatorName: cat.creator.nickname || cat.creator.username,
       creatorId: cat.creatorId,
@@ -43,7 +44,7 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const { name, description } = await req.json();
+    const { name, description, type = "course" } = await req.json();
 
     if (!name || !name.trim()) {
       return NextResponse.json({ message: "板块名称不能为空" }, { status: 400 });
@@ -53,7 +54,8 @@ export async function POST(req: NextRequest) {
       data: {
         name: name.trim(),
         description: description?.trim() || "",
-        creatorId: session.user.id
+        type: type,
+        creatorId: session.user.id as string
       },
       include: {
         creator: {
@@ -66,6 +68,7 @@ export async function POST(req: NextRequest) {
       id: category.id,
       name: category.name,
       description: category.description,
+      type: category.type,
       createdAt: category.createdAt,
       creatorName: category.creator.nickname || category.creator.username,
       creatorId: category.creatorId
