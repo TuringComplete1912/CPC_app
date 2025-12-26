@@ -3,103 +3,87 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
-// 获取系统提示词（所有资料的名称和简介）
-export async function GET() {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.id) {
-    return NextResponse.json({ message: "未登录" }, { status: 401 });
-  }
-
+// 【辅助函数】生成系统上下文
+// (原 GET 方法逻辑，改为函数调用更稳定)
+async function generateSystemContext(userId: string) {
   try {
-    // 获取所有文档
+    // 1. 获取所有文档
     const documents = await prisma.document.findMany({
       select: {
         title: true,
         status: true,
         createdAt: true,
-        author: {
-          select: { nickname: true, username: true }
-        }
+        author: { select: { nickname: true, username: true } }
       },
-      orderBy: { createdAt: "desc" }
+      orderBy: { createdAt: "desc" },
+      take: 10 // 限制数量，防止 Prompt 太长导致超费
     });
 
-    // 获取所有活动日志
+    // 2. 获取所有活动日志
     const workLogs = await prisma.workLog.findMany({
       select: {
         title: true,
         status: true,
         createdAt: true,
-        author: {
-          select: { nickname: true, username: true }
-        }
+        author: { select: { nickname: true, username: true } }
       },
-      orderBy: { createdAt: "desc" }
+      orderBy: { createdAt: "desc" },
+      take: 10
     });
 
-    // 获取所有学习资料
+    // 3. 获取所有学习资料
     const materials = await prisma.material.findMany({
       select: {
         title: true,
         fileType: true,
         createdAt: true,
-        uploader: {
-          select: { nickname: true, username: true }
-        },
-        category: {
-          select: { name: true }
-        }
+        uploader: { select: { nickname: true, username: true } },
+        category: { select: { name: true } }
       },
-      orderBy: { createdAt: "desc" }
+      orderBy: { createdAt: "desc" },
+      take: 10
     });
 
-    // 获取所有话题
+    // 4. 获取所有话题
     const topics = await prisma.topic.findMany({
       select: {
         title: true,
         description: true,
         createdAt: true,
-        author: {
-          select: { nickname: true, username: true }
-        },
-        _count: {
-          select: { answers: true }
-        }
+        author: { select: { nickname: true, username: true } },
+        _count: { select: { answers: true } }
       },
-      orderBy: { createdAt: "desc" }
+      orderBy: { createdAt: "desc" },
+      take: 10
     });
 
-    // 构建系统提示词
-    const systemPrompt = `你是学生第六党支部的AI助手，可以帮助用户了解支部的各类资料和活动。
+    // 5. 构建数据概览 Prompt
+    const dataContext = `
+以下是支部现有的资料概览（仅列出最新）：
 
-以下是支部现有的资料概览：
+## 近期文档
+${documents.map((doc, i) => `${i + 1}. ${doc.title} - ${doc.status === "published" ? "已发布" : "草稿"} (作者: ${doc.author?.nickname || doc.author?.username})`).join("\n")}
 
-## 近期文档 (${documents.length}个)
-${documents.map((doc, i) => `${i + 1}. ${doc.title} - ${doc.status === "published" ? "已发布" : "草稿"} (作者: ${doc.author.nickname || doc.author.username})`).join("\n")}
+## 活动日志
+${workLogs.map((log, i) => `${i + 1}. ${log.title} - ${log.status === "published" ? "已发布" : "草稿"} (作者: ${log.author?.nickname || log.author?.username})`).join("\n")}
 
-## 活动日志 (${workLogs.length}个)
-${workLogs.map((log, i) => `${i + 1}. ${log.title} - ${log.status === "published" ? "已发布" : "草稿"} (作者: ${log.author.nickname || log.author.username})`).join("\n")}
+## 学习资料
+${materials.map((mat, i) => `${i + 1}. ${mat.title} - ${mat.fileType} ${mat.category ? `(分类: ${mat.category.name})` : ""} (上传者: ${mat.uploader?.nickname || mat.uploader?.username})`).join("\n")}
 
-## 学习资料 (${materials.length}个)
-${materials.map((mat, i) => `${i + 1}. ${mat.title} - ${mat.fileType} ${mat.category ? `(分类: ${mat.category.name})` : ""} (上传者: ${mat.uploader.nickname || mat.uploader.username})`).join("\n")}
+## 社区话题
+${topics.map((topic, i) => `${i + 1}. ${topic.title}${topic.description ? ` - ${topic.description}` : ""} (${topic._count?.answers || 0}个回答)`).join("\n")}
+`;
 
-## 社区话题 (${topics.length}个)
-${topics.map((topic, i) => `${i + 1}. ${topic.title}${topic.description ? ` - ${topic.description}` : ""} (${topic._count.answers}个回答)`).join("\n")}
-
-请根据以上信息回答用户的问题。如果用户询问具体内容，请告知他们可以在对应的板块中查看详细信息。`;
-
-    return NextResponse.json({ systemPrompt });
-  } catch (error: any) {
-    console.error("Get system prompt error:", error);
-    return NextResponse.json(
-      { message: error.message || "获取失败" },
-      { status: 500 }
-    );
+    return dataContext;
+  } catch (error) {
+    console.error("生成上下文失败:", error);
+    return ""; // 如果数据库挂了，至少不影响聊天，只是没数据
   }
 }
 
-// AI聊天（支持流式输出）
+// AI聊天主入口
 export async function POST(req: NextRequest) {
+  // 1. 鉴权
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) {
     return NextResponse.json({ message: "未登录" }, { status: 401 });
@@ -112,48 +96,52 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ message: "消息不能为空" }, { status: 400 });
     }
 
-    // 获取用户的API key和设置
-    let userApiKey = apiKey;
-    let useOwnKey = false;
+    // 2. 决定使用哪个 API Key
+    let finalApiKey = apiKey; // 优先用前端传来的（如果有）
     
-    if (!userApiKey) {
+    // 如果前端没传，检查用户个人设置
+    if (!finalApiKey) {
       const user = await prisma.user.findUnique({
         where: { id: session.user.id as string },
         select: { apiKey: true, useOwnApiKey: true }
       });
-      userApiKey = user?.apiKey;
-      useOwnKey = user?.useOwnApiKey || false;
+      
+      if (user?.useOwnApiKey && user?.apiKey) {
+        finalApiKey = user.apiKey;
+      }
     }
 
-    // 系统默认的正确API Key
-    const SYSTEM_API_KEY = "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";
-    
-    // 根据用户设置决定使用哪个key
-    const finalApiKey = (useOwnKey && userApiKey) ? userApiKey : SYSTEM_API_KEY;
-
+    // 如果还是没有，使用系统环境变量 (这里修复了之前的 bug)
+    // 优先读 OPENROUTER_API_KEY，其次读 OPENAI_API_KEY
     if (!finalApiKey) {
+      finalApiKey = process.env.OPENROUTER_API_KEY || process.env.OPENAI_API_KEY;
+    }
+
+    // 最后检查
+    if (!finalApiKey) {
+      console.error("无有效 API Key");
       return NextResponse.json(
-        { message: "请先设置API Key" },
-        { status: 400 }
+        { message: "系统未配置API Key，请联系管理员或在个人设置中填写。" },
+        { status: 500 }
       );
     }
 
-    // 获取系统提示词
-    const systemPromptRes = await GET();
-    const { systemPrompt } = await systemPromptRes.json();
+    // 3. 获取数据库里的支部数据 (你的特色功能)
+    const dbContext = await generateSystemContext(session.user.id);
 
-    // 添加学六小助手的身份
-    const enhancedSystemPrompt = `你是"学六小助手"，学生第六党支部的AI助手。你热情、专业、乐于助人。
+    // 4. 拼接完整 System Prompt (你的学六小助手人设)
+    const systemPrompt = `你是"学六小助手"，学生第六党支部的AI助手。你热情、专业、乐于助人。
 
-${systemPrompt}
+${dbContext}
 
 回答风格：
 - 使用友好、亲切的语气
-- 适当使用emoji让对话更生动
+- 适当使用emoji让对话更生动 🌟
 - 简洁明了，重点突出
-- 对于不确定的信息，诚实告知用户可以在对应板块查看详情`;
+- 对于不确定的信息，诚实告知用户可以在对应板块查看详情
+- 如果用户问及上面概览中不存在的信息，请说明暂未查询到相关记录`;
 
-    // 调用OpenRouter API
+    // 5. 调用 OpenRouter
     const response = await fetch(
       "https://openrouter.ai/api/v1/chat/completions",
       {
@@ -165,38 +153,27 @@ ${systemPrompt}
           "X-Title": "CPC Student Branch App"
         },
         body: JSON.stringify({
-          model: "deepseek/deepseek-r1-0528:free",
+          model: "deepseek/deepseek-r1-0528:free", // 或者 deepseek/deepseek-chat
           messages: [
-            {
-              role: "system",
-              content: enhancedSystemPrompt
-            },
-            {
-              role: "user",
-              content: message
-            }
+            { role: "system", content: systemPrompt },
+            { role: "user", content: message }
           ],
           stream: stream
         })
       }
     );
 
+    // 6. 错误处理
     if (!response.ok) {
       const errorText = await response.text();
-      let error;
-      try {
-        error = JSON.parse(errorText);
-      } catch {
-        error = { message: errorText };
-      }
-      console.error("OpenRouter API error:", error);
+      console.error("OpenRouter Error:", errorText);
       return NextResponse.json(
-        { message: `AI服务调用失败: ${error.error?.message || error.message || "未知错误"}` },
-        { status: 500 }
+        { message: "AI 思考累了，请稍后再试或检查 API Key。" },
+        { status: response.status }
       );
     }
 
-    // 如果是流式输出，直接返回流
+    // 7. 返回流式响应
     if (stream && response.body) {
       return new Response(response.body, {
         headers: {
@@ -207,15 +184,16 @@ ${systemPrompt}
       });
     }
 
-    // 非流式输出
+    // 非流式兼容
     const data = await response.json();
-    const reply = data.choices?.[0]?.message?.content || "抱歉，我无法回答这个问题。";
+    return NextResponse.json({ 
+      reply: data.choices?.[0]?.message?.content || "无回复" 
+    });
 
-    return NextResponse.json({ reply });
   } catch (error: any) {
     console.error("Chat error:", error);
     return NextResponse.json(
-      { message: error.message || "聊天失败" },
+      { message: error.message || "聊天服务暂时不可用" },
       { status: 500 }
     );
   }
