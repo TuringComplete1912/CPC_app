@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { Search, Users, Calendar, MapPin, MessageCircle, X, ArrowLeft } from "lucide-react";
+import { Search, Users, Calendar, MapPin, MessageCircle, X, ArrowLeft, UserCog, Save } from "lucide-react";
 import { Button, Card, Badge } from "@/components/UI";
 import Navbar from "@/components/Navbar";
 
@@ -22,6 +22,28 @@ interface PartyInfoAdmin {
   updatedAt: string;
 }
 
+interface MyPartyInfo {
+  id?: string;
+  politicalStatus: string;
+  className: string;
+  hometown: string;
+  wechatQQ: string;
+  joinLeagueDate: string | null;
+  activistDate: string | null;
+  probationaryDate: string | null;
+  formalDate: string | null;
+  showPoliticalStatus: boolean;
+  showClassName: boolean;
+  showHometown: boolean;
+  showWechatQQ: boolean;
+  showJoinLeagueDate: boolean;
+  showActivistDate: boolean;
+  showProbationaryDate: boolean;
+  showFormalDate: boolean;
+}
+
+const politicalStatusOptions = ["群众", "共青团员", "入党积极分子", "预备党员", "党员"];
+
 export default function PartyAdminPage() {
   const router = useRouter();
   const { data: session, status } = useSession({ required: true });
@@ -32,6 +54,28 @@ export default function PartyAdminPage() {
   const [keyword, setKeyword] = useState("");
   const [isAdmin, setIsAdmin] = useState(false);
   const [selectedUser, setSelectedUser] = useState<PartyInfoAdmin | null>(null);
+  
+  // 管理员自己的党务信息
+  const [showMyInfoModal, setShowMyInfoModal] = useState(false);
+  const [savingMyInfo, setSavingMyInfo] = useState(false);
+  const [myPartyInfo, setMyPartyInfo] = useState<MyPartyInfo>({
+    politicalStatus: "群众",
+    className: "",
+    hometown: "",
+    wechatQQ: "",
+    joinLeagueDate: null,
+    activistDate: null,
+    probationaryDate: null,
+    formalDate: null,
+    showPoliticalStatus: true,
+    showClassName: true,
+    showHometown: true,
+    showWechatQQ: false,
+    showJoinLeagueDate: true,
+    showActivistDate: true,
+    showProbationaryDate: true,
+    showFormalDate: true
+  });
 
   useEffect(() => {
     if (status === "authenticated") {
@@ -74,6 +118,72 @@ export default function PartyAdminPage() {
       console.error("加载失败", error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadMyPartyInfo = async () => {
+    try {
+      const res = await fetch("/api/party-info");
+      if (res.ok) {
+        const data = await res.json();
+        if (data) {
+          setMyPartyInfo(data);
+        }
+      }
+    } catch (error) {
+      console.error("加载个人党务信息失败", error);
+    }
+  };
+
+  const handleSaveMyInfo = async () => {
+    // 验证班级格式（专业+年份，如：土木2201）
+    if (myPartyInfo.className && !/^[\u4e00-\u9fa5]+\d{4}$/.test(myPartyInfo.className)) {
+      alert("班级格式不正确，请使用标准格式（如：土木2201）");
+      return;
+    }
+
+    setSavingMyInfo(true);
+    try {
+      const res = await fetch("/api/party-info", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(myPartyInfo)
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        alert(data.message || "保存失败");
+        return;
+      }
+
+      alert("保存成功");
+      setShowMyInfoModal(false);
+      loadMyPartyInfo();
+    } catch (error) {
+      alert("保存失败，请稍后重试");
+    } finally {
+      setSavingMyInfo(false);
+    }
+  };
+
+  const getStatusIndex = (status: string) => {
+    return politicalStatusOptions.indexOf(status);
+  };
+
+  const shouldShowField = (fieldName: string) => {
+    const statusIndex = getStatusIndex(myPartyInfo.politicalStatus);
+    
+    switch (fieldName) {
+      case "joinLeagueDate":
+        return statusIndex >= 1;
+      case "activistDate":
+        return statusIndex >= 2;
+      case "probationaryDate":
+        return statusIndex >= 3;
+      case "formalDate":
+        return statusIndex >= 4;
+      default:
+        return true;
     }
   };
 
@@ -250,9 +360,20 @@ export default function PartyAdminPage() {
     <div className="min-h-screen bg-gray-50 flex flex-col">
       <Navbar />
       <main className="flex-1 max-w-7xl mx-auto w-full px-6 py-8">
-        <header className="mb-8">
-          <h2 className="text-2xl font-bold text-gray-900">党务管理 - 管理员</h2>
-          <p className="text-gray-500 mt-1">查看和管理所有党员信息</p>
+        <header className="mb-8 flex justify-between items-end">
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900">党务管理 - 管理员</h2>
+            <p className="text-gray-500 mt-1">查看和管理所有党员信息</p>
+          </div>
+          <Button
+            onClick={() => {
+              loadMyPartyInfo();
+              setShowMyInfoModal(true);
+            }}
+            className="bg-brand-600 hover:bg-brand-700"
+          >
+            <UserCog className="w-4 h-4 mr-2" /> 我的党务信息
+          </Button>
         </header>
 
         {/* 筛选和搜索 */}
@@ -380,6 +501,261 @@ export default function PartyAdminPage() {
           </div>
         )}
       </main>
+
+      {/* 我的党务信息弹窗 */}
+      {showMyInfoModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto">
+          <Card className="w-full max-w-4xl my-8 max-h-[90vh] overflow-y-auto">
+            <div className="p-8">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-xl font-bold text-gray-900">我的党务信息</h3>
+                <button
+                  onClick={() => setShowMyInfoModal(false)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* 政治面貌 */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    政治面貌 <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    value={myPartyInfo.politicalStatus}
+                    onChange={(e) => setMyPartyInfo({ ...myPartyInfo, politicalStatus: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500"
+                  >
+                    {politicalStatusOptions.map((option) => (
+                      <option key={option} value={option}>
+                        {option}
+                      </option>
+                    ))}
+                  </select>
+                  <div className="flex items-center gap-2 mt-2">
+                    <input
+                      type="checkbox"
+                      id="showPoliticalStatus"
+                      checked={myPartyInfo.showPoliticalStatus}
+                      onChange={(e) => setMyPartyInfo({ ...myPartyInfo, showPoliticalStatus: e.target.checked })}
+                      className="h-4 w-4 rounded border-gray-300 text-brand-600"
+                    />
+                    <label htmlFor="showPoliticalStatus" className="text-sm text-gray-600">
+                      公开显示
+                    </label>
+                  </div>
+                </div>
+
+                {/* 班级 */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    班级 <span className="text-red-500">*</span>
+                    <span className="text-xs text-gray-500 ml-2">（格式：土木2201）</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={myPartyInfo.className}
+                    onChange={(e) => setMyPartyInfo({ ...myPartyInfo, className: e.target.value })}
+                    placeholder="土木2201"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500"
+                  />
+                  <div className="flex items-center gap-2 mt-2">
+                    <input
+                      type="checkbox"
+                      id="showClassName"
+                      checked={myPartyInfo.showClassName}
+                      onChange={(e) => setMyPartyInfo({ ...myPartyInfo, showClassName: e.target.checked })}
+                      className="h-4 w-4 rounded border-gray-300 text-brand-600"
+                    />
+                    <label htmlFor="showClassName" className="text-sm text-gray-600">
+                      公开显示
+                    </label>
+                  </div>
+                </div>
+
+                {/* 籍贯 */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    籍贯
+                  </label>
+                  <input
+                    type="text"
+                    value={myPartyInfo.hometown}
+                    onChange={(e) => setMyPartyInfo({ ...myPartyInfo, hometown: e.target.value })}
+                    placeholder="请输入籍贯"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500"
+                  />
+                  <div className="flex items-center gap-2 mt-2">
+                    <input
+                      type="checkbox"
+                      id="showHometown"
+                      checked={myPartyInfo.showHometown}
+                      onChange={(e) => setMyPartyInfo({ ...myPartyInfo, showHometown: e.target.checked })}
+                      className="h-4 w-4 rounded border-gray-300 text-brand-600"
+                    />
+                    <label htmlFor="showHometown" className="text-sm text-gray-600">
+                      公开显示
+                    </label>
+                  </div>
+                </div>
+
+                {/* 微信号/QQ号 */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    微信号/QQ号
+                  </label>
+                  <input
+                    type="text"
+                    value={myPartyInfo.wechatQQ}
+                    onChange={(e) => setMyPartyInfo({ ...myPartyInfo, wechatQQ: e.target.value })}
+                    placeholder="请输入微信号或QQ号"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500"
+                  />
+                  <div className="flex items-center gap-2 mt-2">
+                    <input
+                      type="checkbox"
+                      id="showWechatQQ"
+                      checked={myPartyInfo.showWechatQQ}
+                      onChange={(e) => setMyPartyInfo({ ...myPartyInfo, showWechatQQ: e.target.checked })}
+                      className="h-4 w-4 rounded border-gray-300 text-brand-600"
+                    />
+                    <label htmlFor="showWechatQQ" className="text-sm text-gray-600">
+                      公开显示
+                    </label>
+                  </div>
+                </div>
+
+                {/* 入团时间 */}
+                {shouldShowField("joinLeagueDate") && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      入团时间 {getStatusIndex(myPartyInfo.politicalStatus) >= 1 && <span className="text-red-500">*</span>}
+                    </label>
+                    <input
+                      type="date"
+                      value={myPartyInfo.joinLeagueDate || ""}
+                      onChange={(e) => setMyPartyInfo({ ...myPartyInfo, joinLeagueDate: e.target.value })}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500"
+                    />
+                    <div className="flex items-center gap-2 mt-2">
+                      <input
+                        type="checkbox"
+                        id="showJoinLeagueDate"
+                        checked={myPartyInfo.showJoinLeagueDate}
+                        onChange={(e) => setMyPartyInfo({ ...myPartyInfo, showJoinLeagueDate: e.target.checked })}
+                        className="h-4 w-4 rounded border-gray-300 text-brand-600"
+                      />
+                      <label htmlFor="showJoinLeagueDate" className="text-sm text-gray-600">
+                        公开显示
+                      </label>
+                    </div>
+                  </div>
+                )}
+
+                {/* 成为积极分子时间 */}
+                {shouldShowField("activistDate") && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      成为积极分子时间 {getStatusIndex(myPartyInfo.politicalStatus) >= 2 && <span className="text-red-500">*</span>}
+                    </label>
+                    <input
+                      type="date"
+                      value={myPartyInfo.activistDate || ""}
+                      onChange={(e) => setMyPartyInfo({ ...myPartyInfo, activistDate: e.target.value })}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500"
+                    />
+                    <div className="flex items-center gap-2 mt-2">
+                      <input
+                        type="checkbox"
+                        id="showActivistDate"
+                        checked={myPartyInfo.showActivistDate}
+                        onChange={(e) => setMyPartyInfo({ ...myPartyInfo, showActivistDate: e.target.checked })}
+                        className="h-4 w-4 rounded border-gray-300 text-brand-600"
+                      />
+                      <label htmlFor="showActivistDate" className="text-sm text-gray-600">
+                        公开显示
+                      </label>
+                    </div>
+                  </div>
+                )}
+
+                {/* 成为预备党员时间 */}
+                {shouldShowField("probationaryDate") && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      成为预备党员时间 {getStatusIndex(myPartyInfo.politicalStatus) >= 3 && <span className="text-red-500">*</span>}
+                    </label>
+                    <input
+                      type="date"
+                      value={myPartyInfo.probationaryDate || ""}
+                      onChange={(e) => setMyPartyInfo({ ...myPartyInfo, probationaryDate: e.target.value })}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500"
+                    />
+                    <div className="flex items-center gap-2 mt-2">
+                      <input
+                        type="checkbox"
+                        id="showProbationaryDate"
+                        checked={myPartyInfo.showProbationaryDate}
+                        onChange={(e) => setMyPartyInfo({ ...myPartyInfo, showProbationaryDate: e.target.checked })}
+                        className="h-4 w-4 rounded border-gray-300 text-brand-600"
+                      />
+                      <label htmlFor="showProbationaryDate" className="text-sm text-gray-600">
+                        公开显示
+                      </label>
+                    </div>
+                  </div>
+                )}
+
+                {/* 成为正式党员时间 */}
+                {shouldShowField("formalDate") && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      成为正式党员时间 {getStatusIndex(myPartyInfo.politicalStatus) >= 4 && <span className="text-red-500">*</span>}
+                    </label>
+                    <input
+                      type="date"
+                      value={myPartyInfo.formalDate || ""}
+                      onChange={(e) => setMyPartyInfo({ ...myPartyInfo, formalDate: e.target.value })}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500"
+                    />
+                    <div className="flex items-center gap-2 mt-2">
+                      <input
+                        type="checkbox"
+                        id="showFormalDate"
+                        checked={myPartyInfo.showFormalDate}
+                        onChange={(e) => setMyPartyInfo({ ...myPartyInfo, showFormalDate: e.target.checked })}
+                        className="h-4 w-4 rounded border-gray-300 text-brand-600"
+                      />
+                      <label htmlFor="showFormalDate" className="text-sm text-gray-600">
+                        公开显示
+                      </label>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex justify-end gap-3 mt-8 pt-6 border-t border-gray-200">
+                <Button
+                  onClick={() => setShowMyInfoModal(false)}
+                  variant="secondary"
+                  className="px-6"
+                >
+                  取消
+                </Button>
+                <Button
+                  onClick={handleSaveMyInfo}
+                  className="bg-brand-600 hover:bg-brand-700 px-6"
+                  isLoading={savingMyInfo}
+                >
+                  <Save className="w-4 h-4 mr-2" /> 保存信息
+                </Button>
+              </div>
+            </div>
+          </Card>
+        </div>
+      )}
     </div>
   );
 }
