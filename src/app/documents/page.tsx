@@ -8,6 +8,7 @@ import { Button, Card, Badge } from "@/components/UI";
 import Navbar from "@/components/Navbar";
 import ConfirmDeleteDialog from "@/components/ConfirmDeleteDialog";
 import PDFExportModal from "@/components/PDFExportModal";
+import UserBadge from "@/components/UserBadge";
 
 interface Document {
   id: string;
@@ -179,7 +180,8 @@ export default function DocumentsPage() {
                   <div className="flex items-center gap-4 text-sm text-gray-500">
                     <div className="flex items-center gap-1">
                       <UserIcon className="w-4 h-4" />
-                      <span>作者: {doc.author.name}</span>
+                      <span>作者: </span>
+                      <UserBadge userId={doc.author.id} userName={doc.author.name} showClass={false} />
                     </div>
                     <div className="flex items-center gap-1">
                       <Clock className="w-4 h-4" />

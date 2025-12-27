@@ -7,6 +7,7 @@ import { ArrowLeft, Send, User as UserIcon, Clock, Trash2, ThumbsUp, MessageCirc
 import { Button, Card, Badge } from "@/components/UI";
 import Navbar from "@/components/Navbar";
 import ConfirmDeleteDialog from "@/components/ConfirmDeleteDialog";
+import UserBadge from "@/components/UserBadge";
 
 interface Reply {
   id: string;
@@ -250,7 +251,8 @@ export default function TopicDetailPage() {
           <div className="flex items-center gap-4 text-sm text-gray-500">
             <div className="flex items-center gap-1">
               <UserIcon className="w-4 h-4" />
-              <span>发起人: {topic.author.name}</span>
+              <span>发起人: </span>
+              <UserBadge userId={topic.author.id} userName={topic.author.name} />
             </div>
             <div className="flex items-center gap-1">
               <Clock className="w-4 h-4" />
@@ -299,7 +301,7 @@ export default function TopicDetailPage() {
                 </div>
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-2">
-                    <span className="font-bold text-gray-900">{answer.author.name}</span>
+                    <UserBadge userId={answer.author.id} userName={answer.author.name} />
                     <span className="text-xs text-gray-400">
                       {new Date(answer.createdAt).toLocaleString("zh-CN")}
                     </span>
@@ -374,9 +376,7 @@ export default function TopicDetailPage() {
                       {answer.replies.map((reply) => (
                         <div key={reply.id} className="bg-gray-50 rounded-lg p-3">
                           <div className="flex items-center gap-2 mb-1">
-                            <span className="text-sm font-medium text-gray-900">
-                              {reply.author.name}
-                            </span>
+                            <UserBadge userId={reply.author.id} userName={reply.author.name} showClass={false} />
                             <span className="text-xs text-gray-400">
                               {new Date(reply.createdAt).toLocaleString("zh-CN")}
                             </span>

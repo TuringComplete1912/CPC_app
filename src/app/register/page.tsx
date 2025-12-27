@@ -7,7 +7,8 @@ import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { Button, Card, Input } from "@/components/UI";
 
-const INVITE_CODE = "branch6"; // 写死的邀请码
+const INVITE_CODE = "branch6"; // 普通用户邀请码
+const ADMIN_INVITE_CODE = "admin6"; // 管理员邀请码
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -25,8 +26,11 @@ export default function RegisterPage() {
     e.preventDefault();
     setError(null);
 
-    // 验证邀请码
-    if (inviteCode !== INVITE_CODE) {
+    // 验证邀请码（支持普通用户和管理员邀请码）
+    const isAdminCode = inviteCode === ADMIN_INVITE_CODE;
+    const isNormalCode = inviteCode === INVITE_CODE;
+    
+    if (!isAdminCode && !isNormalCode) {
       setError("邀请码错误");
       return;
     }
@@ -47,7 +51,11 @@ export default function RegisterPage() {
       const res = await fetch("/api/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username, password })
+        body: JSON.stringify({ 
+          username, 
+          password,
+          inviteCode // 传递邀请码到后端
+        })
       });
 
       const data = await res.json();
@@ -57,8 +65,12 @@ export default function RegisterPage() {
         return;
       }
 
-      // 注册成功，跳转到登录页
-      alert("注册成功！请使用新账号登录");
+      // 注册成功，显示提示信息
+      if (data.role === "admin") {
+        alert("注册成功！您已获得管理员权限，请使用新账号登录");
+      } else {
+        alert("注册成功！请使用新账号登录");
+      }
       router.push("/login");
     } catch (err) {
       setError("网络错误，请稍后重试");
@@ -113,7 +125,10 @@ export default function RegisterPage() {
           </div>
 
           <div className="space-y-2">
-            <label className="text-sm font-medium text-gray-700">邀请码</label>
+            <label className="text-sm font-medium text-gray-700">
+              邀请码
+              <span className="text-xs text-gray-500 ml-2">（使用管理员邀请码可获得管理员权限）</span>
+            </label>
             <Input
               value={inviteCode}
               onChange={(e) => setInviteCode(e.target.value)}

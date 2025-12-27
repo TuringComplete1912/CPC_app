@@ -54,7 +54,7 @@ export default function Navbar() {
           <button
             onClick={() => router.push("/")}
             className={`text-base font-medium transition-colors ${
-              isActive("/") && !isActive("/documents") && !isActive("/worklogs") && !isActive("/community") ? "text-brand-600 font-bold" : "text-gray-600 hover:text-brand-600"
+              isActive("/") && !isActive("/documents") && !isActive("/worklogs") && !isActive("/community") && !isActive("/party") ? "text-brand-600 font-bold" : "text-gray-600 hover:text-brand-600"
             }`}
           >
             工作台
@@ -82,6 +82,14 @@ export default function Navbar() {
             }`}
           >
             学习园地
+          </button>
+          <button
+            onClick={() => router.push("/party")}
+            className={`text-base font-medium transition-colors ${
+              isActive("/party") ? "text-brand-600 font-bold" : "text-gray-600 hover:text-brand-600"
+            }`}
+          >
+            党务管理
           </button>
           <button
             onClick={() => router.push("/dashboard")}

@@ -7,6 +7,7 @@ import { MessageSquare, Plus, User as UserIcon, Clock, Trash2 } from "lucide-rea
 import { Button, Card, Badge } from "@/components/UI";
 import Navbar from "@/components/Navbar";
 import ConfirmDeleteDialog from "@/components/ConfirmDeleteDialog";
+import UserBadge from "@/components/UserBadge";
 
 interface Topic {
   id: string;
@@ -175,7 +176,7 @@ export default function CommunityPage() {
                   <div className="flex items-center gap-4 text-sm text-gray-500">
                     <div className="flex items-center gap-1">
                       <UserIcon className="w-4 h-4" />
-                      <span>{topic.author.name}</span>
+                      <UserBadge userId={topic.author.id} userName={topic.author.name} />
                     </div>
                     <div className="flex items-center gap-1">
                       <Clock className="w-4 h-4" />

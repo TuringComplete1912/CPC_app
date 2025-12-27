@@ -40,6 +40,38 @@ model User {
   answers         Answer[]
   answerLikes     AnswerLike[]
   replies         Reply[]
+  partyInfo       PartyInfo?
+}
+
+model PartyInfo {
+  id                    String    @id @default(uuid())
+  userId                String    @unique
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // 基本信息
+  politicalStatus       String    @default("群众") // 政治面貌：群众、共青团员、入党积极分子、预备党员、党员
+  className             String    @default("") // 班级（标准化格式，如：2201班）
+  hometown              String    @default("") // 籍贯
+  wechatQQ              String    @default("") // 微信号/QQ号
+  
+  // 时间节点
+  joinLeagueDate        DateTime? // 入团时间
+  activistDate          DateTime? // 成为积极分子时间
+  probationaryDate      DateTime? // 成为预备党员时间
+  formalDate            DateTime? // 成为正式党员时间
+  
+  // 隐私设置
+  showPoliticalStatus   Boolean   @default(true)
+  showClassName         Boolean   @default(true)
+  showHometown          Boolean   @default(true)
+  showWechatQQ          Boolean   @default(false)
+  showJoinLeagueDate    Boolean   @default(true)
+  showActivistDate      Boolean   @default(true)
+  showProbationaryDate  Boolean   @default(true)
+  showFormalDate        Boolean   @default(true)
+  
+  updatedAt             DateTime  @updatedAt
+  createdAt             DateTime  @default(now())
 }
 
 model Document {

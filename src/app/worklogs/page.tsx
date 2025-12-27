@@ -8,6 +8,7 @@ import { Button, Card, Badge } from "@/components/UI";
 import Navbar from "@/components/Navbar";
 import ConfirmDeleteDialog from "@/components/ConfirmDeleteDialog";
 import PDFExportModal from "@/components/PDFExportModal";
+import UserBadge from "@/components/UserBadge";
 
 interface WorkLog {
   id: string;
@@ -179,7 +180,8 @@ export default function WorkLogsPage() {
                   <div className="flex items-center gap-4 text-sm text-gray-500">
                     <div className="flex items-center gap-1">
                       <UserIcon className="w-4 h-4" />
-                      <span>作者: {log.author.name}</span>
+                      <span>作者: </span>
+                      <UserBadge userId={log.author.id} userName={log.author.name} showClass={false} />
                     </div>
                     <div className="flex items-center gap-1">
                       <Clock className="w-4 h-4" />
