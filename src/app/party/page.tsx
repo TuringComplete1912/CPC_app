@@ -112,8 +112,8 @@ export default function PartyManagementPage() {
   };
 
   const handleSave = async () => {
-    // 验证班级格式（专业+年份，如：土木2201）
-    if (partyInfo.className && !/^[\u4e00-\u9fa5]+\d{4}$/.test(partyInfo.className)) {
+    // 验证班级格式（专业+年份，如：土木2201）- 可选
+    if (partyInfo.className && partyInfo.className.trim() && !/^[\u4e00-\u9fa5]+\d{4}$/.test(partyInfo.className)) {
       alert("班级格式不正确，请使用标准格式（如：土木2201）");
       return;
     }
@@ -251,8 +251,8 @@ export default function PartyManagementPage() {
             {/* 班级 */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                班级 <span className="text-red-500">*</span>
-                <span className="text-xs text-gray-500 ml-2">（格式：土木2201）</span>
+                班级
+                <span className="text-xs text-gray-500 ml-2">（格式：土木2201，可选）</span>
               </label>
               <input
                 type="text"
