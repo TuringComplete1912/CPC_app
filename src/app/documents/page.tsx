@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { FileText, Plus, User as UserIcon, Clock, Edit, Trash2, Users, FileDown } from "lucide-react";
+import { FileText, Plus, User as UserIcon, Clock, Edit, Trash2, Users, FileDown, Upload } from "lucide-react";
 import { Button, Card, Badge } from "@/components/UI";
 import Navbar from "@/components/Navbar";
 import ConfirmDeleteDialog from "@/components/ConfirmDeleteDialog";
@@ -37,6 +37,10 @@ export default function DocumentsPage() {
   const [documentToDelete, setDocumentToDelete] = useState<Document | null>(null);
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [pdfExportDoc, setPdfExportDoc] = useState<Document | null>(null);
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [importFile, setImportFile] = useState<File | null>(null);
+  const [importTitle, setImportTitle] = useState("");
+  const [importing, setImporting] = useState(false);
 
   useEffect(() => {
     if (status === "authenticated") {
@@ -125,6 +129,88 @@ export default function DocumentsPage() {
     }
   };
 
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.type !== "application/pdf") {
+        alert("只支持PDF格式文件");
+        return;
+      }
+      setImportFile(file);
+      if (!importTitle) {
+        // 移除.pdf扩展名作为默认标题
+        const nameWithoutExt = file.name.replace(/\.pdf$/i, "");
+        setImportTitle(nameWithoutExt);
+      }
+    }
+  };
+
+  const handleImportPDF = async () => {
+    if (!importFile) {
+      alert("请选择PDF文件");
+      return;
+    }
+    if (!importTitle.trim()) {
+      alert("请输入文档标题");
+      return;
+    }
+
+    setImporting(true);
+    try {
+      // 读取PDF文件内容（这里简化处理，实际可以使用pdf.js解析）
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        const content = `[已导入PDF文件: ${importFile.name}]\n\n此文档从PDF导入，请编辑添加内容。`;
+        
+        // 创建文档
+        const res = await fetch("/api/documents", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            title: importTitle.trim(),
+            content: content,
+            status: "draft"
+          })
+        });
+
+        if (!res.ok) {
+          const data = await res.json();
+          alert(data.message || "导入失败");
+          return;
+        }
+
+        const newDoc = await res.json();
+
+        // 上传PDF作为附件
+        const formData = new FormData();
+        formData.append("file", importFile);
+        
+        const uploadRes = await fetch(`/api/documents/${newDoc.id}/attachments`, {
+          method: "POST",
+          body: formData
+        });
+
+        if (!uploadRes.ok) {
+          console.error("附件上传失败");
+        }
+
+        setImportTitle("");
+        setImportFile(null);
+        setShowImportModal(false);
+        loadDocuments();
+        
+        // 跳转到新创建的文档编辑页面
+        router.push(`/documents/${newDoc.id}`);
+      };
+      reader.readAsText(importFile);
+    } catch (error) {
+      console.error("导入失败:", error);
+      alert("导入失败，请稍后重试");
+    } finally {
+      setImporting(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -142,12 +228,20 @@ export default function DocumentsPage() {
             <h2 className="text-2xl font-bold text-gray-900">近期文档</h2>
             <p className="text-gray-500 mt-1">查看和编辑支部文档</p>
           </div>
-          <Button
-            onClick={() => router.push("/documents/new")}
-            className="bg-brand-600 hover:bg-brand-700"
-          >
-            <Plus className="w-4 h-4 mr-2" /> 新建文档
-          </Button>
+          <div className="flex gap-3">
+            <Button
+              onClick={() => setShowImportModal(true)}
+              className="bg-purple-600 hover:bg-purple-700"
+            >
+              <Upload className="w-4 h-4 mr-2" /> 导入PDF
+            </Button>
+            <Button
+              onClick={() => router.push("/documents/new")}
+              className="bg-brand-600 hover:bg-brand-700"
+            >
+              <Plus className="w-4 h-4 mr-2" /> 新建文档
+            </Button>
+          </div>
         </header>
 
         <div className="space-y-4">
@@ -266,6 +360,69 @@ export default function DocumentsPage() {
           onClose={() => setPdfExportDoc(null)}
           onUpload={handleUploadPDF}
         />
+      )}
+
+      {/* 导入PDF弹窗 */}
+      {showImportModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <Card className="w-full max-w-md space-y-4">
+            <h3 className="text-xl font-bold text-gray-900">导入PDF文档</h3>
+            <div className="space-y-3">
+              <div>
+                <label className="text-sm font-medium text-gray-700 block mb-1">
+                  文档标题 <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={importTitle}
+                  onChange={(e) => setImportTitle(e.target.value)}
+                  placeholder="请输入文档标题"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500"
+                  autoFocus
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium text-gray-700 block mb-1">
+                  选择PDF文件 <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="file"
+                  accept=".pdf,application/pdf"
+                  onChange={handleFileSelect}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500"
+                />
+                {importFile && (
+                  <p className="text-xs text-gray-500 mt-1">
+                    已选择: {importFile.name} ({(importFile.size / 1024 / 1024).toFixed(2)} MB)
+                  </p>
+                )}
+                <p className="text-xs text-gray-400 mt-1">
+                  仅支持PDF格式 | 文件将作为附件保存
+                </p>
+              </div>
+            </div>
+            <div className="flex gap-3 pt-2">
+              <Button
+                onClick={() => {
+                  setShowImportModal(false);
+                  setImportTitle("");
+                  setImportFile(null);
+                }}
+                variant="secondary"
+                className="flex-1"
+              >
+                取消
+              </Button>
+              <Button
+                onClick={handleImportPDF}
+                className="flex-1 bg-purple-600 hover:bg-purple-700"
+                isLoading={importing}
+              >
+                导入
+              </Button>
+            </div>
+          </Card>
+        </div>
       )}
     </div>
   );

@@ -61,16 +61,17 @@ export async function POST(
       "application/vnd.ms-powerpoint",
       "application/vnd.openxmlformats-officedocument.presentationml.presentation",
       "application/zip",
-      "application/x-zip-compressed"
+      "application/x-zip-compressed",
+      "application/x-7z-compressed"
     ];
-    const allowedExtensions = [".pdf", ".ppt", ".pptx", ".zip"];
+    const allowedExtensions = [".pdf", ".ppt", ".pptx", ".zip", ".7z"];
     
     const hasValidType = allowedTypes.some(type => mime.includes(type));
     const hasValidExtension = allowedExtensions.some(ext => fileName.endsWith(ext));
     
     if (!hasValidType && !hasValidExtension) {
       return NextResponse.json(
-        { message: "只支持上传PDF、PPT和ZIP文件" },
+        { message: "只支持上传PDF、PPT、ZIP和7Z文件" },
         { status: 400 }
       );
     }
@@ -93,7 +94,7 @@ export async function POST(
       fileTypeCategory = "document";
     } else if (mime.includes("presentation") || mime.includes("powerpoint") || fileName.endsWith(".ppt") || fileName.endsWith(".pptx")) {
       fileTypeCategory = "presentation";
-    } else if (mime.includes("zip")) {
+    } else if (mime.includes("zip") || mime.includes("7z") || fileName.endsWith(".zip") || fileName.endsWith(".7z")) {
       fileTypeCategory = "archive";
     }
 

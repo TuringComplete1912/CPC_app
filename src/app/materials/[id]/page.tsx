@@ -241,7 +241,11 @@ export default function CategoryDetailPage() {
                           : "bg-blue-50 text-blue-700"
                     }
                   >
-                    {mat.fileType === "presentation" ? "PPT" : mat.fileType === "archive" ? "ZIP" : "PDF"}
+                    {mat.fileType === "presentation" 
+                      ? "PPT" 
+                      : mat.fileType === "archive" 
+                        ? (mat.title.toLowerCase().endsWith('.7z') ? "7Z" : "ZIP")
+                        : "PDF"}
                   </Badge>
                 </div>
                 <div className="text-xs text-gray-400 space-y-1">
@@ -260,7 +264,7 @@ export default function CategoryDetailPage() {
                 </div>
                 <div className="flex items-center justify-between">
                   <a
-                    href={mat.fileUrl}
+                    href={`/api/materials/${mat.id}/download`}
                     download
                     className="inline-flex items-center gap-2 text-sm text-brand-600 hover:text-brand-700"
                   >
@@ -314,7 +318,7 @@ export default function CategoryDetailPage() {
                 </label>
                 <input
                   type="file"
-                  accept=".pdf,.ppt,.pptx,.zip"
+                  accept=".pdf,.ppt,.pptx,.zip,.7z"
                   onChange={handleFileSelect}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500"
                 />
@@ -324,7 +328,7 @@ export default function CategoryDetailPage() {
                   </p>
                 )}
                 <p className="text-xs text-gray-400 mt-1">
-                  支持格式: PDF、PPT、ZIP | 普通用户限制: 50MB
+                  支持格式: PDF、PPT、ZIP、7Z | 普通用户限制: 50MB
                 </p>
               </div>
             </div>

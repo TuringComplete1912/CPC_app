@@ -61,11 +61,37 @@ function SearchContent() {
     router.push(`/search?q=${encodeURIComponent(query)}&type=${searchType}`);
   };
 
-  const handleDownload = (fileUrl: string, fileName: string) => {
-    const a = document.createElement("a");
-    a.href = fileUrl;
-    a.download = fileName;
-    a.click();
+  const handleDownload = async (materialId: string) => {
+    try {
+      const response = await fetch(`/api/materials/${materialId}/download`);
+      if (!response.ok) {
+        throw new Error("下载失败");
+      }
+      
+      // 从响应头获取文件名
+      const contentDisposition = response.headers.get("Content-Disposition");
+      let filename = "download";
+      if (contentDisposition) {
+        const filenameMatch = contentDisposition.match(/filename\*=UTF-8''(.+)/);
+        if (filenameMatch) {
+          filename = decodeURIComponent(filenameMatch[1]);
+        }
+      }
+      
+      // 创建blob并下载
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (error) {
+      console.error("下载失败:", error);
+      alert("下载失败，请稍后重试");
+    }
   };
 
   const formatFileSize = (bytes: number) => {
@@ -277,7 +303,7 @@ function SearchContent() {
                             <Button
                               onClick={(e) => {
                                 e.stopPropagation();
-                                handleDownload(item.fileUrl, item.title);
+                                handleDownload(item.id);
                               }}
                               variant="secondary"
                               className="text-sm"

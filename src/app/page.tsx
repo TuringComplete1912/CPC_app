@@ -632,7 +632,7 @@ export default function HomePage() {
                   <p>{new Date(mat.createdAt).toLocaleDateString("zh-CN")}</p>
                 </div>
                 <a
-                  href={mat.fileUrl}
+                  href={`/api/materials/${mat.id}/download`}
                   className="p-2 rounded-full bg-gray-50 hover:bg-brand-600 hover:text-white transition-colors"
                   title="下载"
                   download
